@@ -55,7 +55,7 @@ public class ArrowTrailListener implements Listener {
         Projectile arrow = event.getEntity();
 
         Main.getScheduler().runTaskTimer(Main.getInstance(), (task) -> {
-            if(!arrow.hasMetadata("inactive")){
+            if(!arrow.hasMetadata("inactive")){     //vv this bullshit for offsetX is the color of the note?? (n)/24 = color where 0<=n<=24
                 Particle.NOTE.builder().offset((arrow.getTicksLived() % 24)/24f, 0, 0).location(arrow.getLocation()).count(0).receivers(32).spawn();
                 return;
             }

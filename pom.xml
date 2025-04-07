@@ -53,7 +53,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>C:\Users\Ank\Desktop\1.21.4 Server\plugins</outputDirectory>
+                            <outputDirectory>C:\Users\Ank\Desktop\1.21.4_Server\plugins</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${basedir}/target</directory>
