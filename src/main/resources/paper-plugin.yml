@@ -1,0 +1,4 @@
+name: ermc
+version: '0.0.1-beta-experimental-v1'
+main: me.starzebra.ermc.Main
+api-version: '1.21'
