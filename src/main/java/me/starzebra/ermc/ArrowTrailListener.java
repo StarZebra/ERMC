@@ -16,6 +16,7 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -25,6 +26,18 @@ public class ArrowTrailListener implements Listener {
     long lastShot = 0;
 
     ArrayList<Location> infectedBlocks = new ArrayList<>();
+    List<Material> cycleBlocks = Arrays.asList(
+            Material.MAGMA_BLOCK,
+            Material.DIAMOND_BLOCK,
+            Material.SPRUCE_LOG,
+            Material.GLOWSTONE,
+            Material.GRAY_TERRACOTTA,
+            Material.YELLOW_GLAZED_TERRACOTTA,
+            Material.BONE_BLOCK,
+            Material.CAULDRON,
+            Material.BEACON,
+            Material.IRON_BLOCK,
+            Material.GOLD_BLOCK);
 
     BukkitScheduler scheduler = Main.getScheduler();
     Plugin plugin = Main.getInstance();
@@ -120,17 +133,13 @@ public class ArrowTrailListener implements Listener {
                 }else {
                     task.cancel();
                 }
-            }, 0L, 5L);
+            }, 0L, 10L);
         }
-
-
-
     }
 
     private BlockData getRandomBlockData(){
         Random rand = new Random();
-        List<Material> mats = Main.getNonLegacyBlockMaterials();
-        Material randMat = mats.get(rand.nextInt(mats.size()));
+        Material randMat = cycleBlocks.get(rand.nextInt(cycleBlocks.size()));
         return randMat.createBlockData();
     }
 
