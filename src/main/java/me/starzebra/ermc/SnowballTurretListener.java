@@ -22,6 +22,7 @@ public class SnowballTurretListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event){
         Player player = event.getPlayer();
+        if(!player.hasMetadata("protect")) return;
         Main.getScheduler().runTaskTimer(Main.getInstance(), (task) -> {
             if(keepAlive){
 
@@ -57,6 +58,7 @@ public class SnowballTurretListener implements Listener {
 
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event){
+        if(!event.getPlayer().hasMetadata("protect")) return;
         keepAlive = false;
     }
 
