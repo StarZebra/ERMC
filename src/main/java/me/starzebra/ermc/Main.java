@@ -14,11 +14,9 @@ public final class Main extends JavaPlugin {
     public static JavaPlugin getInstance(){
         return plugin;
     }
-
-    public static BukkitScheduler getScheduler() { return scheduler; }
-
-
-
+    public static BukkitScheduler getScheduler() {
+        return scheduler;
+    }
 
     @SuppressWarnings("UnstableApiUsage") // for lens to not tweak with commands
     @Override
@@ -34,10 +32,12 @@ public final class Main extends JavaPlugin {
         });
 
         PluginManager pm = getServer().getPluginManager();
-        //pm.registerEvents(new BlockBreakListener(), this);
-        pm.registerEvents(new SnowballTurretListener(), this);
-        pm.registerEvents(new BoneInteractListener(), this);
+
         pm.registerEvents(new ArrowTrailListener(), this);
+
+        //pm.registerEvents(new BoneInteractListener(), this);
+        //pm.registerEvents(new BlockBreakListener(), this);
+        //pm.registerEvents(new SnowballTurretListener(), this);
 
     }
 

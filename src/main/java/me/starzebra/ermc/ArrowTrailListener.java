@@ -22,8 +22,10 @@ import java.util.Random;
 
 public class ArrowTrailListener implements Listener {
 
-    long shootDelay = 250;
+    long shootDelay = 100;
     long lastShot = 0;
+
+    boolean abilityReady = false;
 
     ArrayList<Location> infectedBlocks = new ArrayList<>();
     List<Material> cycleBlocks = Arrays.asList(
@@ -43,7 +45,7 @@ public class ArrowTrailListener implements Listener {
     Plugin plugin = Main.getInstance();
 
     @EventHandler
-    public void onRightClick(PlayerInteractEvent event){
+    public void onRightClickBow(PlayerInteractEvent event){
         if(event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.LEFT_CLICK_AIR || event.getItem() == null) return;
         if(event.getItem().getType() != Material.BOW) return;
 
@@ -62,11 +64,37 @@ public class ArrowTrailListener implements Listener {
 
         player.playSound(player.getEyeLocation(), Sound.ENTITY_ARROW_SHOOT, 0.5f, 1.2f);
         for (Vector vec : shootVectors) {
-            Arrow specialArrow = player.launchProjectile(Arrow.class, vec.multiply(2));
-            specialArrow.setMetadata("specialArrow", new FixedMetadataValue(plugin, true));
-            specialArrow.setMetadata("infect_block", new FixedMetadataValue(plugin, true));
+            Arrow special_arrow = player.launchProjectile(Arrow.class, vec.multiply(2));
+            special_arrow.setMetadata("special_arrow", new FixedMetadataValue(plugin, true));
+            special_arrow.setMetadata("infect_block", new FixedMetadataValue(plugin, true));
         }
 
+    }
+
+    @EventHandler
+    public void onLeftClickBow(PlayerInteractEvent event){
+        if(event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR || event.getItem() == null) return;
+        if(event.getItem().getType() != Material.BOW) return;
+        if(abilityReady) {
+            event.setCancelled(true);
+            shootAbilityBeam(event.getPlayer(), 8);
+            abilityReady = false;
+            event.getPlayer().setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
+        }
+    }
+
+    private void shootAbilityBeam(Player player, int range){
+        if(player == null) return;
+        Location eyeLoc = player.getEyeLocation();
+        Vector dir = eyeLoc.getDirection();
+
+        for (int i = 0; i < range * 2; i++) {
+            Particle.DUST.builder()
+                    .count(2)
+                    .data(new Particle.DustOptions(Color.RED, 1.5f))
+                    .location(eyeLoc.clone().add(dir.clone().multiply((i+1)/2f)))
+                    .receivers(10).spawn();
+        }
     }
 
     private Vector ERMC$getDirWithYawOffset(Player player, double offsetYaw){
@@ -102,17 +130,34 @@ public class ArrowTrailListener implements Listener {
         if(event.getEntity().getType() != EntityType.ARROW) return;
         if(!(event.getEntity().getShooter() instanceof Player)) return;
         Arrow arrow = (Arrow) event.getEntity();
+        Entity hitEntity = event.getHitEntity();
+        Block hitBlock = event.getHitBlock();
         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         arrow.setMetadata("inactive", new FixedMetadataValue(plugin, true));
-        if(event.getHitEntity() != null && arrow.hasMetadata("specialArrow")){
-            LivingEntity entity = (LivingEntity) event.getHitEntity();
+        if(hitEntity != null && arrow.hasMetadata("special_arrow")){
+            if(!(hitEntity instanceof LivingEntity entity)) return;
             entity.setNoDamageTicks(2);
+
+            Player shooter = (Player) event.getEntity().getShooter();
+            if(shooter == null) return;
+            if(shooter.hasMetadata("remaining_hits")){
+                int remaining_hits = shooter.getMetadata("remaining_hits").getFirst().asInt();
+
+                if (remaining_hits - 1 <= 0) {
+                    abilityReady = true;
+                    plugin.getLogger().info("Abiliy charged!");
+                } else {
+                    shooter.setMetadata("remaining_hits", new FixedMetadataValue(plugin, remaining_hits-1));
+                }
+
+            }else{
+                shooter.setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
+            }
         }
 
-        if(event.getHitBlock() != null && arrow.hasMetadata("infect_block")){
+        if(hitBlock != null && arrow.hasMetadata("infect_block")){
             arrow.remove();
 
-            Block hitBlock = event.getHitBlock();
             World world = hitBlock.getWorld();
             Location loc = hitBlock.getLocation();
             BlockData hitBlockData = hitBlock.getBlockData();
