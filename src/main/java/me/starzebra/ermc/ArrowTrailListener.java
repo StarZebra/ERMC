@@ -7,18 +7,22 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 
 public class ArrowTrailListener implements Listener {
 
@@ -78,15 +82,30 @@ public class ArrowTrailListener implements Listener {
         if(abilityReady) {
             event.setCancelled(true);
             shootAbilityBeam(event.getPlayer(), 8);
-            abilityReady = false;
-            event.getPlayer().setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
         }
     }
 
+    @EventHandler
+    public void onAttackWithBow(EntityDamageByEntityEvent event){
+        if(!(event.getDamager() instanceof Player player)) return;
+        if(!(event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK)) return;
+        if(player.getInventory().getItemInMainHand().getType() != Material.BOW) return;
+
+        if(abilityReady){
+            shootAbilityBeam(player, 8);
+        }
+
+    }
+
+    @SuppressWarnings("SameParameterValue")
     private void shootAbilityBeam(Player player, int range){
         if(player == null) return;
         Location eyeLoc = player.getEyeLocation();
         Vector dir = eyeLoc.getDirection();
+        World world = player.getWorld();
+
+        player.setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
+        abilityReady = false;
 
         for (int i = 0; i < range * 2; i++) {
             Particle.DUST.builder()
@@ -95,6 +114,24 @@ public class ArrowTrailListener implements Listener {
                     .location(eyeLoc.clone().add(dir.clone().multiply((i+1)/2f)))
                     .receivers(10).spawn();
         }
+
+        List<Entity> piercedEntities = new ArrayList<>();
+        Predicate<Entity> nonPiercedEntity = (entity) -> !piercedEntities.contains(entity) && !(entity instanceof Player);
+
+        for (int i = 0; i < 5; i++) {
+            RayTraceResult blockCheck = world.rayTraceBlocks(eyeLoc.clone(), dir, range);
+            if(blockCheck != null) return;
+            RayTraceResult result = world.rayTraceEntities(eyeLoc.clone(), dir, range, 0.3f, nonPiercedEntity);
+
+            if(result == null) return;
+            Entity hitEntity = result.getHitEntity();
+
+            if(!(hitEntity instanceof LivingEntity)) return;
+            ((LivingEntity) hitEntity).damage(5);
+            piercedEntities.add(hitEntity);
+
+        }
+
     }
 
     private Vector ERMC$getDirWithYawOffset(Player player, double offsetYaw){

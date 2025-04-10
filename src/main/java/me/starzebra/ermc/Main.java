@@ -35,6 +35,7 @@ public final class Main extends JavaPlugin {
 
         pm.registerEvents(new ArrowTrailListener(), this);
 
+        //pm.registerEvents(new ServerTickListener(), this);
         //pm.registerEvents(new BoneInteractListener(), this);
         //pm.registerEvents(new BlockBreakListener(), this);
         //pm.registerEvents(new SnowballTurretListener(), this);
