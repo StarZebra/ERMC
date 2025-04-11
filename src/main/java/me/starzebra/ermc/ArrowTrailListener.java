@@ -1,5 +1,7 @@
 package me.starzebra.ermc;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -12,27 +14,27 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class ArrowTrailListener implements Listener {
 
-    long shootDelay = 100;
-    long lastShot = 0;
-
-    boolean abilityReady = false;
-
-    ArrayList<Location> infectedBlocks = new ArrayList<>();
-    List<Material> cycleBlocks = Arrays.asList(
+    final long SHOOT_DELAY = 100;
+    final long INFECT_DURATION = 100L;
+    final int BEAM_RANGE = 8;
+    final int REQ_HITS = 10;
+    final String SPECIAL_ARROW_META = "special_arrow";
+    final String INFECT_BLOCK_META = "infect_block";
+    final String REMAINING_HITS_META = "remaining_hits";
+    final List<Material> cycleBlocks = List.of(
             Material.MAGMA_BLOCK,
             Material.DIAMOND_BLOCK,
             Material.SPRUCE_LOG,
@@ -44,9 +46,12 @@ public class ArrowTrailListener implements Listener {
             Material.BEACON,
             Material.IRON_BLOCK,
             Material.GOLD_BLOCK);
+    final BukkitScheduler scheduler = Main.getScheduler();
+    final Plugin plugin = Main.getInstance();
+    private final Map<UUID, Boolean> abilityReadyMap = new HashMap<>();
 
-    BukkitScheduler scheduler = Main.getScheduler();
-    Plugin plugin = Main.getInstance();
+    long lastShot = 0;
+    Set<Location> infectedBlocks = new HashSet<>();
 
     @EventHandler
     public void onRightClickBow(PlayerInteractEvent event){
@@ -56,21 +61,21 @@ public class ArrowTrailListener implements Listener {
         event.setCancelled(true);
 
         long now = System.currentTimeMillis();
-        if(now - lastShot < shootDelay) return;
+        if(now - lastShot < SHOOT_DELAY) return;
         lastShot = now;
 
         Player player = event.getPlayer();
 
         Vector[] shootVectors = new Vector[3];
         shootVectors[0] = player.getEyeLocation().getDirection();
-        shootVectors[1] = ERMC$getDirWithYawOffset(player, 5);
-        shootVectors[2] = ERMC$getDirWithYawOffset(player, -5);
+        shootVectors[1] = getDirectionWithOffsetYaw(player, 5);
+        shootVectors[2] = getDirectionWithOffsetYaw(player, -5);
 
         player.playSound(player.getEyeLocation(), Sound.ENTITY_ARROW_SHOOT, 0.5f, 1.2f);
         for (Vector vec : shootVectors) {
             Arrow special_arrow = player.launchProjectile(Arrow.class, vec.multiply(2));
-            special_arrow.setMetadata("special_arrow", new FixedMetadataValue(plugin, true));
-            special_arrow.setMetadata("infect_block", new FixedMetadataValue(plugin, true));
+            special_arrow.setMetadata(SPECIAL_ARROW_META, new FixedMetadataValue(plugin, true));
+            special_arrow.setMetadata(INFECT_BLOCK_META, new FixedMetadataValue(plugin, true));
         }
 
     }
@@ -78,10 +83,10 @@ public class ArrowTrailListener implements Listener {
     @EventHandler
     public void onLeftClickBow(PlayerInteractEvent event){
         if(event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR || event.getItem() == null) return;
-        if(event.getItem().getType() != Material.BOW) return;
-        if(abilityReady) {
+        if(isNotBow(event.getItem())) return;
+        if(abilityReadyMap.containsKey(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
-            shootAbilityBeam(event.getPlayer(), 8);
+            shootAbilityBeam(event.getPlayer(), BEAM_RANGE);
         }
     }
 
@@ -89,10 +94,10 @@ public class ArrowTrailListener implements Listener {
     public void onAttackWithBow(EntityDamageByEntityEvent event){
         if(!(event.getDamager() instanceof Player player)) return;
         if(!(event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK)) return;
-        if(player.getInventory().getItemInMainHand().getType() != Material.BOW) return;
+        if(isNotBow(player.getInventory().getItemInMainHand())) return;
 
-        if(abilityReady){
-            shootAbilityBeam(player, 8);
+        if(abilityReadyMap.containsKey(player.getUniqueId())){
+            shootAbilityBeam(player, BEAM_RANGE);
         }
 
     }
@@ -104,8 +109,8 @@ public class ArrowTrailListener implements Listener {
         Vector dir = eyeLoc.getDirection();
         World world = player.getWorld();
 
-        player.setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
-        abilityReady = false;
+        player.setMetadata(REMAINING_HITS_META, new FixedMetadataValue(plugin, REQ_HITS));
+        abilityReadyMap.remove(player.getUniqueId());
 
         for (int i = 0; i < range * 2; i++) {
             Particle.DUST.builder()
@@ -128,13 +133,14 @@ public class ArrowTrailListener implements Listener {
 
             if(!(hitEntity instanceof LivingEntity)) return;
             ((LivingEntity) hitEntity).damage(5);
+            ((LivingEntity) hitEntity).setNoDamageTicks(2);
             piercedEntities.add(hitEntity);
 
         }
 
     }
 
-    private Vector ERMC$getDirWithYawOffset(Player player, double offsetYaw){
+    private @NotNull Vector getDirectionWithOffsetYaw(@NotNull Player player, double offsetYaw){
         Vector vector = new Vector();
         double rotX = player.getYaw() + offsetYaw;
         double rotY = player.getPitch() + 2;
@@ -143,6 +149,10 @@ public class ArrowTrailListener implements Listener {
         vector.setX(-xz * Math.sin(Math.toRadians(rotX)));
         vector.setZ(xz * Math.cos(Math.toRadians(rotX)));
         return vector;
+    }
+
+    private boolean isNotBow(ItemStack item){
+        return item == null || item.getType() != Material.BOW;
     }
 
     @EventHandler
@@ -171,28 +181,35 @@ public class ArrowTrailListener implements Listener {
         Block hitBlock = event.getHitBlock();
         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         arrow.setMetadata("inactive", new FixedMetadataValue(plugin, true));
-        if(hitEntity != null && arrow.hasMetadata("special_arrow")){
+
+        if(hitEntity != null && arrow.hasMetadata(SPECIAL_ARROW_META)){
             if(!(hitEntity instanceof LivingEntity entity)) return;
             entity.setNoDamageTicks(2);
 
             Player shooter = (Player) event.getEntity().getShooter();
             if(shooter == null) return;
-            if(shooter.hasMetadata("remaining_hits")){
-                int remaining_hits = shooter.getMetadata("remaining_hits").getFirst().asInt();
+            if(shooter.hasMetadata(REMAINING_HITS_META)){
+                int remaining_hits = shooter.getMetadata(REMAINING_HITS_META).getFirst().asInt();
 
                 if (remaining_hits - 1 <= 0) {
-                    abilityReady = true;
-                    plugin.getLogger().info("Abiliy charged!");
+                    if(abilityReadyMap.put(shooter.getUniqueId(), true) == null){
+                        Component component = Component.text()
+                                .content("Left-click ability charged!").color(TextColor.color(255,255,0))
+                                .build();
+                        shooter.sendMessage(component);
+                        shooter.playSound(shooter.getLocation(), Sound.BLOCK_CONDUIT_ACTIVATE, 1f, 1.5f);
+                    }
+
                 } else {
-                    shooter.setMetadata("remaining_hits", new FixedMetadataValue(plugin, remaining_hits-1));
+                    shooter.setMetadata(REMAINING_HITS_META, new FixedMetadataValue(plugin, remaining_hits-1));
                 }
 
             }else{
-                shooter.setMetadata("remaining_hits", new FixedMetadataValue(plugin, 10));
+                shooter.setMetadata(REMAINING_HITS_META, new FixedMetadataValue(plugin, REQ_HITS));
             }
         }
 
-        if(hitBlock != null && arrow.hasMetadata("infect_block")){
+        if(hitBlock != null && arrow.hasMetadata(INFECT_BLOCK_META)){
             arrow.remove();
 
             World world = hitBlock.getWorld();
@@ -202,12 +219,10 @@ public class ArrowTrailListener implements Listener {
             if(infectedBlocks.contains(loc)) return;
             infectedBlocks.add(loc);
 
-            world.setBlockData(loc, Material.BONE_BLOCK.createBlockData());
-
             scheduler.runTaskLater(plugin, () -> {
                 infectedBlocks.remove(loc);
                 world.setBlockData(loc, hitBlockData);
-            }, 100L);
+            }, INFECT_DURATION);
 
             scheduler.runTaskTimer(plugin, (task) -> {
                 if(infectedBlocks.contains(loc)){
