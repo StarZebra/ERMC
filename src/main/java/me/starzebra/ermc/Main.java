@@ -34,6 +34,7 @@ public final class Main extends JavaPlugin {
         PluginManager pm = getServer().getPluginManager();
 
         pm.registerEvents(new ArrowTrailListener(), this);
+        pm.registerEvents(new AxeThrowListener(), this);
 
         //pm.registerEvents(new ServerTickListener(), this);
         //pm.registerEvents(new BoneInteractListener(), this);
