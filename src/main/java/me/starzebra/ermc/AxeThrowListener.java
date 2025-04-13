@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.RayTraceResult;
@@ -24,7 +25,6 @@ import java.util.*;
 public class AxeThrowListener implements Listener {
 
     private final int AXE_THROW_LENGTH = 10;
-    private final int LOG_LIMIT = 10;
     private final Plugin plugin = Main.getInstance();
     private final List<Material> allowedItems = List.of(
             Material.WOODEN_AXE,
@@ -48,6 +48,8 @@ public class AxeThrowListener implements Listener {
         if(event.getAction() != Action.RIGHT_CLICK_AIR) return;
         if(event.getItem() == null) return;
         if(!allowedItems.contains(event.getItem().getType())) return;
+        int sweep = event.getItem().getPersistentDataContainer().getOrDefault(NamespacedKey.minecraft("sweep"), PersistentDataType.INTEGER, 0);
+        if(sweep <= 0) return;
 
         Player player = event.getPlayer();
         World world = player.getWorld();
@@ -83,8 +85,9 @@ public class AxeThrowListener implements Listener {
                     }else{
                         axeEntity.remove();
                         cancel();
-                        Set<Block> connectedLogs = getConnectedLogsInclusive(hitBlock, LOG_LIMIT);
+                        Set<Block> connectedLogs = getConnectedLogsInclusive(hitBlock, sweep);
                         Iterator<Block> iterator = connectedLogs.stream().iterator();
+                        plugin.getLogger().info("Sweeping with "+ sweep);
                         new BukkitRunnable(){
                             @Override
                             public void run() {

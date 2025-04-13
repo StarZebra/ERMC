@@ -6,12 +6,18 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @SuppressWarnings("UnstableApiUsage")
 public class GiveAxeCommand {
@@ -37,6 +43,12 @@ public class GiveAxeCommand {
 
     private static ItemStack createAxeItem(int sweep){
         ItemStack axe = new ItemStack(Material.IRON_AXE);
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text()
+                .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
+                .content("Sweep: ").color(NamedTextColor.GRAY)
+                .append(Component.text().content("+"+sweep).color(NamedTextColor.GREEN)).build());
+        axe.lore(lore);
         axe.editPersistentDataContainer((c) -> c.set(NamespacedKey.minecraft("sweep"), PersistentDataType.INTEGER, sweep));
         return axe;
     }
