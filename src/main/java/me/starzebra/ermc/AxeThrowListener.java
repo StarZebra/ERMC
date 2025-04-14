@@ -134,7 +134,6 @@ public class AxeThrowListener implements Listener {
 
         logList.add(origin);
         toLoop.add(origin);
-
         while ((origin = toLoop.poll()) != null && logList.size() < limit){
             getConnectedBlocks(origin, logList, toLoop);
         }

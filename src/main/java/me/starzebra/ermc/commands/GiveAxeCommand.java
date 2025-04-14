@@ -27,8 +27,7 @@ public class GiveAxeCommand {
                 .then(Commands.argument("sweep", IntegerArgumentType.integer(1))
                         .executes(context -> {
                             int sweep = context.getArgument("sweep", Integer.class);
-                            runGiveAxe(context, sweep);
-                            return Command.SINGLE_SUCCESS;
+                            return runGiveAxe(context, sweep);
                         })
                 );
     }
