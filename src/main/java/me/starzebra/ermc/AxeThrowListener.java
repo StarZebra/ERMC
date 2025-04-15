@@ -99,11 +99,6 @@ public class AxeThrowListener implements Listener {
                                     Block b = iterator.next();
                                     world.setBlockData(b.getLocation(), Material.AIR.createBlockData());
                                     Location loc = b.getLocation().add(new Vector(0.5,0.5,0.5));
-                                    Particle.BLOCK.builder()
-                                            .count(10)
-                                            .data(b.getBlockData())
-                                            .location(loc)
-                                            .receivers(10).spawn();
                                     world.playSound(loc, Sound.BLOCK_WOOD_BREAK, 1, 1.5f);
                                 }else{
                                     cancel();
