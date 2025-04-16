@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import me.starzebra.ermc.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -48,7 +49,10 @@ public class GiveAxeCommand {
                 .content("Sweep: ").color(NamedTextColor.GRAY)
                 .append(Component.text().content("+"+sweep).color(NamedTextColor.GREEN)).build());
         axe.lore(lore);
-        axe.editPersistentDataContainer((c) -> c.set(NamespacedKey.minecraft("sweep"), PersistentDataType.INTEGER, sweep));
+
+        NamespacedKey key = new NamespacedKey(Main.getInstance(), "sweep");
+
+        axe.editPersistentDataContainer((c) -> c.set(key, PersistentDataType.INTEGER, sweep));
         return axe;
     }
 

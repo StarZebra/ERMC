@@ -12,8 +12,6 @@ import java.util.Map;
 
 public class EntityDeathListener implements Listener {
 
-
-
     @EventHandler
     public void onBlazeAmalgamationDeath(EntityDeathEvent event){
         if(event.getEntityType() != EntityType.BLAZE) return;

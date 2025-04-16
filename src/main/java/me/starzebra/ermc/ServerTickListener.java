@@ -35,7 +35,7 @@ public class ServerTickListener implements Listener {
     @EventHandler
     public void onServerTickEnd(ServerTickEndEvent event){
         if(event.getTickNumber() % 20 == 0){
-            Main.getInstance().getLogger().info("Server ticked 1 second at tick#"+event.getTickNumber());
+            Main.getInstance().getLogger().fine("Server ticked 1 second at tick#"+event.getTickNumber());
             if(spawnLocations.isEmpty()){
                 initSpawnLocations();
             }
@@ -45,7 +45,7 @@ public class ServerTickListener implements Listener {
             for (Location loc : spawnLocations.keySet()){
                 if(loc.getNearbyPlayers(50, 20).isEmpty()) return;
                 if(!trySpawnBlazeAmalgamation(loc)){
-                    Main.getInstance().getLogger().info("Failed to spawn blaze amalgamation at "+loc);
+                    Main.getInstance().getLogger().fine("Failed to spawn blaze amalgamation at "+loc);
                 }
             }
         }
