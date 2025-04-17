@@ -48,7 +48,7 @@ public class AxeThrowListener implements Listener {
         if(event.getAction() != Action.RIGHT_CLICK_AIR) return;
         if(event.getItem() == null) return;
         if(!allowedItems.contains(event.getItem().getType())) return;
-        int sweep = event.getItem().getPersistentDataContainer().getOrDefault(NamespacedKey.minecraft("sweep"), PersistentDataType.INTEGER, 0);
+        int sweep = event.getItem().getPersistentDataContainer().getOrDefault(NamespacedKey.fromString("sweep", plugin), PersistentDataType.INTEGER, 0);
         if(sweep <= 0) return;
 
         Player player = event.getPlayer();
@@ -86,25 +86,27 @@ public class AxeThrowListener implements Listener {
                         axeEntity.remove();
                         cancel();
                         Set<Block> connectedLogs = getConnectedLogsInclusive(hitBlock, sweep);
-                        Iterator<Block> iterator = connectedLogs.stream().iterator();
                         plugin.getLogger().info("Sweeping with "+ sweep);
-                        new BukkitRunnable(){
-                            @Override
-                            public void run() {
-                                if(!connectedLogs.isEmpty()){
-                                    if(!iterator.hasNext()) {
-                                        cancel();
-                                        return;
-                                    }
-                                    Block b = iterator.next();
-                                    world.setBlockData(b.getLocation(), Material.AIR.createBlockData());
-                                    Location loc = b.getLocation().add(new Vector(0.5,0.5,0.5));
-                                    world.playSound(loc, Sound.BLOCK_WOOD_BREAK, 1, 1.5f);
-                                }else{
-                                    cancel();
-                                }
-                            }
-                        }.runTaskTimer(plugin, 0L, 1L);
+                        asyncLogRemove(world, connectedLogs);
+//                        Iterator<Block> iterator = connectedLogs.stream().iterator();
+//
+//                        new BukkitRunnable(){
+//                            @Override
+//                            public void run() {
+//                                if(!connectedLogs.isEmpty()){
+//                                    if(!iterator.hasNext()) {
+//                                        cancel();
+//                                        return;
+//                                    }
+//                                    Block b = iterator.next();
+//                                    world.setBlockData(b.getLocation(), Material.AIR.createBlockData());
+//                                    Location loc = b.getLocation().add(new Vector(0.5,0.5,0.5));
+//                                    world.playSound(loc, Sound.BLOCK_WOOD_BREAK, 1, 1.5f);
+//                                }else{
+//                                    cancel();
+//                                }
+//                            }
+//                        }.runTaskTimer(plugin, 0L, 1L);
 
                     }
 
@@ -117,6 +119,24 @@ public class AxeThrowListener implements Listener {
                     .color(NamedTextColor.RED).build();
             player.sendMessage(feedbackMessage);
         }
+    }
+
+    private void asyncLogRemove(World world, Set<Block> blockSet){
+        Iterator<Block> iterator = blockSet.stream().iterator();
+        Main.getScheduler().runTaskTimer(plugin, (task) -> {
+            if(!blockSet.isEmpty()){
+                if(!iterator.hasNext()) {
+                    task.cancel();
+                    return;
+                }
+                Block b = iterator.next();
+                world.setBlockData(b.getLocation(), Material.AIR.createBlockData());
+                Location loc = b.getLocation().add(new Vector(0.5,0.5,0.5));
+                world.playSound(loc, Sound.BLOCK_WOOD_BREAK, 1, 1.5f);
+            }else{
+                task.cancel();
+            }
+        }, 0L, 1L);
     }
 
     private boolean isLog(Material inMat){
