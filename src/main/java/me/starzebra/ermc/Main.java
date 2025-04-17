@@ -3,7 +3,6 @@ package me.starzebra.ermc;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.starzebra.ermc.commands.GiveAxeCommand;
 import me.starzebra.ermc.commands.StopProtectCommand;
-import me.starzebra.ermc.commands.TestMobCommand;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -32,7 +31,6 @@ public final class Main extends JavaPlugin {
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
             commands.registrar().register(StopProtectCommand.createCommand().build());
             commands.registrar().register(GiveAxeCommand.createCommand().build());
-            commands.registrar().register(TestMobCommand.createCommand().build());
         });
 
         PluginManager pm = getServer().getPluginManager();
