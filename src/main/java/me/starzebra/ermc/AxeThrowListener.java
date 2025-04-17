@@ -21,6 +21,8 @@ import org.joml.AxisAngle4f;
 import org.joml.Matrix4f;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class AxeThrowListener implements Listener {
 
@@ -86,8 +88,22 @@ public class AxeThrowListener implements Listener {
                         axeEntity.remove();
                         cancel();
                         Set<Block> connectedLogs = getConnectedLogsInclusive(hitBlock, sweep);
+                        List<Block> logList = new ArrayList<>(connectedLogs);
+                        int splitAmount = 1 + connectedLogs.size() / 50;
+
+                        if(splitAmount > 1){
+                            List<List<Block>> listOfLists = splitList(logList, splitAmount);
+                            plugin.getLogger().info("Try split sweeping with "+splitAmount + " splits!");
+
+                            for(List<Block> list : listOfLists){
+                                logRemove(world, list);
+                            }
+
+                        } else {
+                            logRemove(world, logList);
+                        }
                         plugin.getLogger().info("Sweeping with "+ sweep);
-                        asyncLogRemove(world, connectedLogs);
+
 //                        Iterator<Block> iterator = connectedLogs.stream().iterator();
 //
 //                        new BukkitRunnable(){
@@ -121,7 +137,15 @@ public class AxeThrowListener implements Listener {
         }
     }
 
-    private void asyncLogRemove(World world, Set<Block> blockSet){
+    private List<List<Block>> splitList(List<Block> ogList, int parts){
+        int size = ogList.size();
+        int partSize = (size + parts - 1) / parts;
+
+        return IntStream.range(0, parts)
+                .mapToObj(i -> ogList.subList(i * partSize, Math.min(size, (i + 1) * partSize))).collect(Collectors.toList());
+    }
+
+    private void logRemove(World world, List<Block> blockSet){
         Iterator<Block> iterator = blockSet.stream().iterator();
         Main.getScheduler().runTaskTimer(plugin, (task) -> {
             if(!blockSet.isEmpty()){
