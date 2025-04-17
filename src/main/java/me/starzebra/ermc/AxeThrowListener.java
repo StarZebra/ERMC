@@ -19,6 +19,8 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Matrix4f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,6 +28,7 @@ import java.util.stream.IntStream;
 
 public class AxeThrowListener implements Listener {
 
+    private static final Logger log = LoggerFactory.getLogger(AxeThrowListener.class);
     private final int AXE_THROW_LENGTH = 10;
     private final Plugin plugin = Main.getInstance();
     private final List<Material> allowedItems = List.of(
@@ -104,26 +107,6 @@ public class AxeThrowListener implements Listener {
                         }
                         plugin.getLogger().info("Sweeping with "+ sweep);
 
-//                        Iterator<Block> iterator = connectedLogs.stream().iterator();
-//
-//                        new BukkitRunnable(){
-//                            @Override
-//                            public void run() {
-//                                if(!connectedLogs.isEmpty()){
-//                                    if(!iterator.hasNext()) {
-//                                        cancel();
-//                                        return;
-//                                    }
-//                                    Block b = iterator.next();
-//                                    world.setBlockData(b.getLocation(), Material.AIR.createBlockData());
-//                                    Location loc = b.getLocation().add(new Vector(0.5,0.5,0.5));
-//                                    world.playSound(loc, Sound.BLOCK_WOOD_BREAK, 1, 1.5f);
-//                                }else{
-//                                    cancel();
-//                                }
-//                            }
-//                        }.runTaskTimer(plugin, 0L, 1L);
-
                     }
 
                 }
@@ -145,10 +128,10 @@ public class AxeThrowListener implements Listener {
                 .mapToObj(i -> ogList.subList(i * partSize, Math.min(size, (i + 1) * partSize))).collect(Collectors.toList());
     }
 
-    private void logRemove(World world, List<Block> blockSet){
-        Iterator<Block> iterator = blockSet.stream().iterator();
+    private void logRemove(World world, List<Block> list){
+        Iterator<Block> iterator = list.stream().iterator();
         Main.getScheduler().runTaskTimer(plugin, (task) -> {
-            if(!blockSet.isEmpty()){
+            if(!list.isEmpty()){
                 if(!iterator.hasNext()) {
                     task.cancel();
                     return;
