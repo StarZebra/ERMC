@@ -48,8 +48,10 @@ public class GiveRelayCommand {
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text()
                 .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
-                .content("Throws a void relay in the direction").color(NamedTextColor.GRAY)
-                .append(Component.text().content(" you're looking.")).build());
+                .content("Throws a void relay in the").color(NamedTextColor.GRAY).build());
+        lore.add(Component.text()
+                .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
+                .content("direction you're looking.").color(NamedTextColor.GRAY).build());
         relay.lore(lore);
 
         NamespacedKey key = new NamespacedKey(Main.getInstance(), "relay_id");
