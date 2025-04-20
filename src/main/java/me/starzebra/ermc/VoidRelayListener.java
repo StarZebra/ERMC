@@ -1,5 +1,9 @@
 package me.starzebra.ermc;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -8,18 +12,59 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 public class VoidRelayListener implements Listener {
 
     Plugin plugin = Main.getInstance();
+
+    Map<String, Location> relayLocations = new HashMap<>();
+
+    NamespacedKey key = new NamespacedKey(plugin, "relay_id");
+
+    @EventHandler
+    public void onInteractRelay(PlayerInteractEvent event){
+        if(event.getHand() == EquipmentSlot.OFF_HAND || event.getAction().isLeftClick()) return;
+        ItemStack heldItem = event.getItem();
+        if(heldItem == null) return;
+        if(heldItem.getType() != Material.PURPLE_DYE) return;
+
+        Player player = event.getPlayer();
+        World world = player.getWorld();
+
+        Predicate<Entity> displayEntity = (entity) -> (entity instanceof Display) && entity.getPersistentDataContainer().has(key);
+        RayTraceResult result = world.rayTraceEntities(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.1f)), player.getEyeLocation().getDirection(), 100, 0.5, displayEntity);
+        if(result == null) return;
+        PersistentDataContainer dataContainer = result.getHitEntity().getPersistentDataContainer();
+        Location relayLocation = null;
+        String relayID = dataContainer.get(key, PersistentDataType.STRING);
+        if(relayID != null){
+            relayLocation = relayLocations.get(relayID);
+        }
+        if(relayLocation != null){
+            player.teleport(relayLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            player.sendMessage(Component.text().content("Teleported to a void ").color(NamedTextColor.LIGHT_PURPLE)
+                    .append(Component.text().decoration(TextDecoration.BOLD, true).content("RELAY!").color(NamedTextColor.DARK_PURPLE)
+                            .hoverEvent(HoverEvent.showText(Component.text().content(relayID)))));
+        }
+    }
+
+    //TODO: Make cool animations and sounds for the relay and teleport
 
     @EventHandler
     public void on(PlayerInteractEvent event){
@@ -27,12 +72,12 @@ public class VoidRelayListener implements Listener {
         ItemStack heldItem = event.getItem();
         if(heldItem == null) return;
         if(heldItem.getType() != Material.PAPER) return;
-        if(!heldItem.getPersistentDataContainer().has(new NamespacedKey(plugin, "relay_id"))) return;
-
-        plugin.getLogger().info("Interact with void relay...");
+        if(!heldItem.getPersistentDataContainer().has(key)) return;
 
         Player player = event.getPlayer();
         World world = player.getWorld();
+
+        player.getInventory().remove(heldItem);
 
         ItemDisplay relayProjectile = world.spawn(player.getEyeLocation(), ItemDisplay.class, (relay) -> {
             relay.setItemStack(ItemStack.of(Material.PAPER));
@@ -45,29 +90,39 @@ public class VoidRelayListener implements Listener {
         item.setVelocity(player.getLocation().getDirection());
         item.addPassenger(relayProjectile);
 
+        String relayID = heldItem.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+        if(relayID == null) return;
+
+        ItemStack teleportItem = new ItemStack(Material.PURPLE_DYE);
+        ItemMeta meta = teleportItem.getItemMeta();
+        meta.displayName(Component.text().decoration(TextDecoration.ITALIC, false).content("Relay Teleporter").color(NamedTextColor.DARK_PURPLE).build());
+        meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, relayID);
+        teleportItem.setItemMeta(meta);
+        player.getInventory().addItem(teleportItem);
+
         Main.getScheduler().runTaskTimer(plugin, (task) -> {
             if(item.isOnGround()){
                 Location landLocation = item.getLocation();
                 plugin.getLogger().info("Landed at "+item.getLocation());
                 item.remove();
-                //relayProjectile.remove();
-                spawnVoidRelay(landLocation);
+                relayProjectile.remove();
+                relayLocations.put(relayID, landLocation);
+                spawnVoidRelay(landLocation, relayID);
                 task.cancel();
             }
         },0L, 1L);
-
     }
 
-    private void spawnVoidRelay(Location origin){
+    private void spawnVoidRelay(Location origin, String relayID){
         origin.setYaw(0);
         origin.setPitch(0);
-        List<BlockDisplay> relayBlocks = createVoidRelay(origin);
+        List<BlockDisplay> relayBlocks = createVoidRelay(origin, relayID);
         for (BlockDisplay bd : relayBlocks){
             bd.spawnAt(origin);
         }
     }
 
-    private List<BlockDisplay> createVoidRelay(Location loc){
+    private List<BlockDisplay> createVoidRelay(Location loc, String relayID){
         List<BlockDisplay> list = new ArrayList<>();
         World world = loc.getWorld();
 
@@ -82,59 +137,20 @@ public class VoidRelayListener implements Listener {
         );
         middle.setRotation(0,0);
         middle.setTransformation(scaledTransformation);
+        middle.getPersistentDataContainer().set(key, PersistentDataType.STRING, relayID);
         list.add(middle);
 
-        BlockDisplay corner1 = world.createEntity(loc, BlockDisplay.class);
-        corner1.setBlock(Material.GRAY_CONCRETE.createBlockData());
-        Transformation cornerTrans1 = middle.getTransformation();
-        Transformation scaledCornerTrans1 = new Transformation(
-                cornerTrans1.getTranslation().add(0.35f,-0.2f,0.35f),
-                cornerTrans1.getLeftRotation(),
-                new Vector3f(0.75f,0.75f,0.75f),
-                cornerTrans1.getRightRotation()
-        );
-        corner1.setRotation(0,0);
-        corner1.setTransformation(scaledCornerTrans1);
-        list.add(corner1);
+        BlockDisplay corners = world.createEntity(loc, BlockDisplay.class);
+        corners.setBlock(Material.GRAY_CONCRETE.createBlockData());
 
-        BlockDisplay corner2 = world.createEntity(loc, BlockDisplay.class);
-        corner2.setBlock(Material.GRAY_CONCRETE.createBlockData());
-        Transformation cornerTrans2 = middle.getTransformation();
-        Transformation scaledCornerTrans2 = new Transformation(
-                transformation.getTranslation().add(-0.35f,-0.2f,0.35f),
-                cornerTrans2.getLeftRotation(),
-                new Vector3f(0.75f,0.75f,0.75f),
-                cornerTrans2.getRightRotation()
+        Transformation cornersTransformation = new Transformation(
+                transformation.getTranslation().add(-0.25f, -0.1f, -0.25f),
+                transformation.getLeftRotation(),
+                new Vector3f(1.25f, 0.75f, 1.25f),
+                transformation.getRightRotation()
         );
-        corner2.setRotation(0,0);
-        corner2.setTransformation(scaledCornerTrans2);
-        list.add(corner2);
-
-        BlockDisplay corner3 = world.createEntity(loc, BlockDisplay.class);
-        corner3.setBlock(Material.GRAY_CONCRETE.createBlockData());
-        Transformation cornerTrans3 = middle.getTransformation();
-        Transformation scaledCornerTrans3 = new Transformation(
-                transformation.getTranslation().add(0,0,-0.75f),
-                cornerTrans3.getLeftRotation(),
-                new Vector3f(0.75f,0.75f,0.75f),
-                cornerTrans3.getRightRotation()
-        );
-        corner3.setRotation(0,0);
-        corner3.setTransformation(scaledCornerTrans3);
-        list.add(corner3);
-
-        BlockDisplay corner4 = world.createEntity(loc, BlockDisplay.class);
-        corner4.setBlock(Material.GRAY_CONCRETE.createBlockData());
-        Transformation cornerTrans4 = middle.getTransformation();
-        Transformation scaledCornerTrans4 = new Transformation(
-                transformation.getTranslation().add(0.7f,0,0),
-                cornerTrans4.getLeftRotation(),
-                new Vector3f(0.75f,0.75f,0.75f),
-                cornerTrans4.getRightRotation()
-        );
-        corner4.setRotation(0,0);
-        corner4.setTransformation(scaledCornerTrans4);
-        list.add(corner4);
+        corners.setTransformation(cornersTransformation);
+        list.add(corners);
         return list;
     }
 }
