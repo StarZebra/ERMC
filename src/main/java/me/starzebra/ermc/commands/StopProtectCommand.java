@@ -7,8 +7,12 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import me.starzebra.ermc.Main;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
+
+import java.io.File;
+import java.io.IOException;
 
 @SuppressWarnings("UnstableApiUsage")
 public class StopProtectCommand {
@@ -21,21 +25,25 @@ public class StopProtectCommand {
     }
 
     private static int runStopProtect(CommandContext<CommandSourceStack> context){
-        Main.getInstance().getLogger().info("HI FROM RUNSTOPPROTECT");
-        //DISABLE PROTECTION SNOWBALLS
-
         CommandSender sender = context.getSource().getSender();
         if(sender instanceof Player player){
-            System.out.println("is player");
+
+            File file = Main.getConfigFile();
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 
             if(player.hasMetadata("protect")){
-                System.out.println("removed meta protect");
+                config.set("player.snowball_protection", false);
                 player.removeMetadata("protect", Main.getInstance());
             }else{
-                System.out.println("added meta protect");
+                config.set("player.snowball_protection", true);
                 player.setMetadata("protect", new FixedMetadataValue(Main.getInstance(), true));
             }
 
+            try {
+                config.save(file);
+            }catch (IOException e){
+                e.printStackTrace();
+            }
 
             return Command.SINGLE_SUCCESS;
         }

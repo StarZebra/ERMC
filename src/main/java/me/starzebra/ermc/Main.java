@@ -8,16 +8,22 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
+import java.io.File;
+
 public final class Main extends JavaPlugin {
 
     private static BukkitScheduler scheduler;
     private static Main plugin;
+    private static File configFile;
 
     public static JavaPlugin getInstance(){
         return plugin;
     }
     public static BukkitScheduler getScheduler() {
         return scheduler;
+    }
+    public static File getConfigFile(){
+        return configFile;
     }
 
     @SuppressWarnings("UnstableApiUsage") // for lens to not tweak with commands
@@ -27,6 +33,9 @@ public final class Main extends JavaPlugin {
         getLogger().info("ERMC plugin has been enabled!");
         plugin = this;
         scheduler = getServer().getScheduler();
+        configFile = new File(this.getDataFolder(), "config.yml");
+
+        saveResource("config.yml", false);
 
         //Register commands
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
