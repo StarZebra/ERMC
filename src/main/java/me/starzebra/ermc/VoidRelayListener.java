@@ -49,7 +49,7 @@ public class VoidRelayListener implements Listener {
 
         Predicate<Entity> displayEntity = (entity) -> (entity instanceof Display) && entity.getPersistentDataContainer().has(key);
         RayTraceResult result = world.rayTraceEntities(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.1f)), player.getEyeLocation().getDirection(), 100, 0.5, displayEntity);
-        if(result == null) return;
+        if(result == null || result.getHitEntity() == null) return;
         PersistentDataContainer dataContainer = result.getHitEntity().getPersistentDataContainer();
         Location relayLocation = null;
         String relayID = dataContainer.get(key, PersistentDataType.STRING);
