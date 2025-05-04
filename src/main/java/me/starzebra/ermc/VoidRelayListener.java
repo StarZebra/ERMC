@@ -4,14 +4,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -20,18 +18,24 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 public class VoidRelayListener implements Listener {
 
     Plugin plugin = Main.getInstance();
 
-    Map<String, Location> relayLocations = new HashMap<>();
+    public static  Map<String, Location> relayLocations = new HashMap<>();
 
     NamespacedKey key = new NamespacedKey(plugin, "relay_id");
+
+    public static Map<String, Location> getRelayLocations(){
+        return relayLocations;
+    }
 
     @EventHandler
     public void onInteractRelay(PlayerInteractEvent event){
@@ -44,7 +48,7 @@ public class VoidRelayListener implements Listener {
         World world = player.getWorld();
 
         Predicate<Entity> displayEntity = (entity) -> (entity instanceof Display) && entity.getPersistentDataContainer().has(key);
-        RayTraceResult result = world.rayTraceEntities(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.1f)), player.getEyeLocation().getDirection(), 100, 0.5, displayEntity);
+        RayTraceResult result = world.rayTraceEntities(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.3f)), player.getEyeLocation().getDirection(), 1000, 0.5, displayEntity);
         if(result == null || result.getHitEntity() == null) return;
         PersistentDataContainer dataContainer = result.getHitEntity().getPersistentDataContainer();
         Location relayLocation = null;
@@ -110,5 +114,35 @@ public class VoidRelayListener implements Listener {
                 task.cancel();
             }
         },0L, 1L);
+    }
+
+    @EventHandler
+    public void on(PlayerItemHeldEvent event){
+        if(event.getPlayer().getInventory().getItem(event.getNewSlot()) == null) return;
+        if(event.getPlayer().getInventory().getItem(event.getNewSlot()).getType() != Material.PURPLE_DYE) return;
+
+        ItemStack heldItem = event.getPlayer().getInventory().getItem(event.getNewSlot());
+        if(heldItem == null) return;
+        String id = heldItem.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+        if(id == null) return;
+
+        World world = event.getPlayer().getWorld();
+        Location relayLocation = relayLocations.get(id);
+
+        Main.getScheduler().runTaskTimer(Main.getInstance(), (task) -> {
+
+            if(Objects.equals(event.getPlayer().getInventory().getItemInMainHand().getPersistentDataContainer().get(key, PersistentDataType.STRING), heldItem.getPersistentDataContainer().get(key, PersistentDataType.STRING))) {
+                Vector targetVec = relayLocation.toVector().subtract(event.getPlayer().getEyeLocation().toVector());
+                Vector dir = event.getPlayer().getEyeLocation().getDirection().multiply(2);
+
+                Location finalLoc = event.getPlayer().getEyeLocation().add(dir.add(targetVec.normalize()).toLocation(world));
+
+                world.spawnParticle(Particle.WITCH, finalLoc,0);
+                return;
+            }
+
+            task.cancel();
+
+        },0, 1L);
     }
 }
