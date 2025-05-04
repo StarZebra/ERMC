@@ -9,7 +9,6 @@ import me.starzebra.ermc.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Color;
-import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -45,7 +44,7 @@ public class StopProtectCommand {
                 display.setTeleportDuration(1);
             });
 
-            Location fakeRelay = new Location(world, 13.5,71.5,-67.5);
+            //Location fakeRelay = new Location(world, 13.5,71.5,-67.5);
 
             player.addPassenger(textDisplay);
 

@@ -29,13 +29,9 @@ public class VoidRelayListener implements Listener {
 
     Plugin plugin = Main.getInstance();
 
-    public static  Map<String, Location> relayLocations = new HashMap<>();
+    Map<String, Location> relayLocations = new HashMap<>();
 
     NamespacedKey key = new NamespacedKey(plugin, "relay_id");
-
-    public static Map<String, Location> getRelayLocations(){
-        return relayLocations;
-    }
 
     @EventHandler
     public void onInteractRelay(PlayerInteractEvent event){
@@ -81,9 +77,7 @@ public class VoidRelayListener implements Listener {
 
         player.getInventory().remove(heldItem);
 
-        ItemDisplay relayProjectile = world.spawn(player.getEyeLocation(), ItemDisplay.class, (relay) -> {
-            relay.setItemStack(ItemStack.of(Material.PAPER));
-        });
+        ItemDisplay relayProjectile = world.spawn(player.getEyeLocation(), ItemDisplay.class, (relay) -> relay.setItemStack(ItemStack.of(Material.PAPER)));
         //TODO: make this an invis armor stand instead of just anything that has gravity and is invisible unlike displays :(
         Item item = (Item) world.spawnEntity(player.getEyeLocation(), EntityType.ITEM);
         item.setItemStack(ItemStack.of(Material.END_ROD));
