@@ -20,12 +20,8 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Transformation;
-import org.joml.Vector3f;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -55,6 +51,8 @@ public class VoidRelayListener implements Listener {
         String relayID = dataContainer.get(key, PersistentDataType.STRING);
         if(relayID != null){
             relayLocation = relayLocations.get(relayID);
+            relayLocation.setYaw(player.getYaw());
+            relayLocation.setPitch(player.getPitch());
         }
         if(relayLocation != null){
             player.teleport(relayLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
@@ -107,50 +105,10 @@ public class VoidRelayListener implements Listener {
                 item.remove();
                 relayProjectile.remove();
                 relayLocations.put(relayID, landLocation);
-                spawnVoidRelay(landLocation, relayID);
+                VoidRelay relay = new VoidRelay(landLocation, relayID);
+                relay.createAndSpawnRelay();
                 task.cancel();
             }
         },0L, 1L);
-    }
-
-    private void spawnVoidRelay(Location origin, String relayID){
-        origin.setYaw(0);
-        origin.setPitch(0);
-        List<BlockDisplay> relayBlocks = createVoidRelay(origin, relayID);
-        for (BlockDisplay bd : relayBlocks){
-            bd.spawnAt(origin);
-        }
-    }
-
-    private List<BlockDisplay> createVoidRelay(Location loc, String relayID){
-        List<BlockDisplay> list = new ArrayList<>();
-        World world = loc.getWorld();
-
-        BlockDisplay middle = world.createEntity(loc, BlockDisplay.class);
-        middle.setBlock(Material.PURPLE_CONCRETE.createBlockData());
-        Transformation transformation = middle.getTransformation();
-        Transformation scaledTransformation = new Transformation( // props to https://misode.github.io/transformation/
-                transformation.getTranslation().add(-0.35f, 0, -0.35f),
-                transformation.getLeftRotation(),
-                new Vector3f(0.75f,0.75f,0.75f),
-                transformation.getRightRotation()
-        );
-        middle.setRotation(0,0);
-        middle.setTransformation(scaledTransformation);
-        middle.getPersistentDataContainer().set(key, PersistentDataType.STRING, relayID);
-        list.add(middle);
-
-        BlockDisplay corners = world.createEntity(loc, BlockDisplay.class);
-        corners.setBlock(Material.GRAY_CONCRETE.createBlockData());
-
-        Transformation cornersTransformation = new Transformation(
-                transformation.getTranslation().add(-0.25f, -0.1f, -0.25f),
-                transformation.getLeftRotation(),
-                new Vector3f(1.25f, 0.75f, 1.25f),
-                transformation.getRightRotation()
-        );
-        corners.setTransformation(cornersTransformation);
-        list.add(corners);
-        return list;
     }
 }

@@ -16,6 +16,7 @@ public class EntityDeathListener implements Listener {
     public void onBlazeAmalgamationDeath(EntityDeathEvent event){
         if(event.getEntityType() != EntityType.BLAZE) return;
         if(!event.getEntity().hasMetadata("amalgamation")) return;
+        if(event.getDamageSource().getCausingEntity() == null) return;
         Entity entity = event.getEntity();
         List<Entity> passengers = entity.getPassengers();
 
